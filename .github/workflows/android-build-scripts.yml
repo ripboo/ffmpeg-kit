@@ -1,7 +1,7 @@
 name: android build scripts
 
 on:
-  workflow_dispatch: # Allows manual triggering, which will create a release
+  workflow_dispatch:
   push:
     branches:
       - development
@@ -27,7 +27,7 @@ on:
 
 jobs:
   build-main-on-linux:
-    name: android arm64-v8a on linux (ndk-r25-16k)
+    name: android arm64-v8a on linux (ndk-r25b)
     runs-on: ubuntu-22.04
     defaults:
       run:
@@ -41,13 +41,19 @@ jobs:
           java-version: '17'
       - name: prerequisites
         run: ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --uninstall "cmake;3.10.2.4988404" "cmake;3.18.1"
-      - name: set up android ndk r25 (16k support)
-        run: |
-          curl -L -s "https://storage.googleapis.com/android-build/builds/aosp-ndk-release-r23-linux-linux/12186248/38c84da1ab0dd31ea40c857d2c9ee77450d9d71d76e60ac2ccd33d379babc534/android-ndk-12186248-linux-x86_64.zip?GoogleAccessId=gcs-sign%40android-builds-project.google.com.iam.gserviceaccount.com&Expires=1757434143&Signature=oK1FSeU9JpfoBkEqBZk%2FVmTH%2B1JJ09Dlv%2BsXblxpBTBq1kBA%2B42UPzbBpb%2BNy%2BIliEoWd2lO9Xbc92Lmzl1CiDyFwtzsxYE11nwUNNVWsjLvc0K0SO1%2F8j4p8b8eo5Zq5gc%2Bq7SamsrgelSUDSJfcYkDNR%2BE%2FyRpJgvtOqra%2FmEjw85pDrFMXFjZrSikYGjy%2Fl4E8TJRr%2BKh1BBkTEY5Oxvx3ia53LEzKE9bKKpFmFjZ9iXp%2BHh5ZSFPYZPrTMAeROSHlKARwvW35Bqgr%2FIyKHkSLKOk5%2FcbDud5iQwjuIB0l3MQTtkYr2TeDRh2BNzM82Z8MOwUfoncAI6nfj2%2Few%3D%3D" -o ndk.zip
-          unzip -q -o ndk.zip -d .ndk
-          echo "ANDROID_NDK_ROOT=$PWD/.ndk/$(ls .ndk)" >> $GITHUB_ENV
+      
+      - name: set up android ndk r25b
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r25b
+          link-to-sdk: true
+
+      - name: set env variables
+        run: echo "ANDROID_NDK_ROOT=$ANDROID_NDK_HOME" >> $GITHUB_ENV
+
       - name: run the build script (arm64-v8a only)
         run: ./android.sh -d --full --enable-gpl --disable-arm-v7a --disable-arm-v7a-neon --disable-x86 --disable-x86-64
+
       - name: prepare and upload main aar
         run: |
           AAR_PATH=$(find prebuilt -type f -name 'ffmpeg-kit.aar')
@@ -55,15 +61,18 @@ jobs:
             echo "Error: ffmpeg-kit.aar not found in prebuilt directory."
             exit 1
           fi
-          mv "$AAR_PATH" "ffmpeg-kit-arm64-v8a-ndk-r25-16k.aar"
+          mv "$AAR_PATH" "ffmpeg-kit-arm64-v8a-ndk-r25.aar"
+
       - uses: actions/upload-artifact@v4
         with:
           name: ffmpeg-kit-arm64-v8a-aar
-          path: ffmpeg-kit-arm64-v8a-ndk-r25-16k.aar
+          path: ffmpeg-kit-arm64-v8a-ndk-r25.aar
           if-no-files-found: error
+
       - name: print build logs
         if: ${{ always() }}
-        run: cat build.log
+        run: test -f build.log && cat build.log || echo "No build.log file found"
+
       - name: print ffbuild logs
         if: ${{ failure() }}
         run: '[[ -f ./src/ffmpeg/ffbuild/config.log ]] && tail -50 ./src/ffmpeg/ffbuild/config.log'
@@ -89,7 +98,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.TAG_NAME }}
-          name: "Android ARM64-v8a AAR (NDK r25-16k) - ${{ env.TAG_NAME }}"
-          body: "Automated release of Android AAR file built exclusively for arm64-v8a architecture using NDK r25 with 16kB page size support."
+          name: "Android ARM64-v8a AAR (NDK r25b) - ${{ env.TAG_NAME }}"
+          body: "Automated release of Android AAR file built exclusively for arm64-v8a architecture using NDK r25b."
           prerelease: true
           files: aar-artifacts/*/*.aar
