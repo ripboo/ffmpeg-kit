@@ -40,7 +40,10 @@ jobs:
           distribution: 'adopt'
           java-version: '17'
       - name: prerequisites
-        run: ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --uninstall "cmake;3.10.2.4988404" "cmake;3.18.1"
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nasm yasm build-essential ninja-build cmake pkg-config autoconf automake libtool
+          ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --uninstall "cmake;3.10.2.4988404" "cmake;3.18.1"
       
       - name: set up android ndk r25b
         uses: nttld/setup-ndk@v1
@@ -51,8 +54,8 @@ jobs:
       - name: set env variables
         run: echo "ANDROID_NDK_ROOT=$ANDROID_NDK_HOME" >> $GITHUB_ENV
 
-      - name: run the build script (arm64-v8a only)
-        run: ./android.sh -d --full --enable-gpl --disable-arm-v7a --disable-arm-v7a-neon --disable-x86 --disable-x86-64
+      - name: run the build script (arm64-v8a + x264 + x265)
+        run: ./android.sh -d --enable-gpl --enable-x264 --enable-x265 --disable-arm-v7a --disable-arm-v7a-neon --disable-x86 --disable-x86-64
 
       - name: prepare and upload main aar
         run: |
@@ -99,6 +102,6 @@ jobs:
         with:
           tag_name: ${{ env.TAG_NAME }}
           name: "Android ARM64-v8a AAR (NDK r25b) - ${{ env.TAG_NAME }}"
-          body: "Automated release of Android AAR file built exclusively for arm64-v8a architecture using NDK r25b."
+          body: "Automated release of Android AAR file built exclusively for arm64-v8a architecture with x264 and x265 support."
           prerelease: true
           files: aar-artifacts/*/*.aar
