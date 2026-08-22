@@ -42,7 +42,7 @@ jobs:
       - name: prerequisites
         run: |
           sudo apt-get update
-          sudo apt-get install -y nasm yasm build-essential ninja-build cmake pkg-config autoconf automake libtool doxygen swig
+          sudo apt-get install -y nasm yasm build-essential ninja-build cmake pkg-config autoconf automake libtool doxygen swig groovy
           ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --uninstall "cmake;3.10.2.4988404" "cmake;3.18.1"
       
       - name: set up android ndk r25b
@@ -72,13 +72,13 @@ jobs:
           path: ffmpeg-kit-arm64-v8a-ndk-r25.aar
           if-no-files-found: error
 
-      - name: print build logs
-        if: ${{ always() }}
-        run: test -f build.log && cat build.log || echo "No build.log file found"
-
-      - name: print ffbuild logs
+      - name: print full build logs on failure
         if: ${{ failure() }}
-        run: '[[ -f ./src/ffmpeg/ffbuild/config.log ]] && tail -50 ./src/ffmpeg/ffbuild/config.log'
+        run: |
+          echo "=== TAIL OF BUILD LOG ==="
+          test -f build.log && tail -n 100 build.log || echo "No build.log file found"
+          echo "=== TAIL OF FFMPEG KIT BUILD LOG ==="
+          test -f ./android/build.log && tail -n 100 ./android/build.log || true
 
   create-release:
     name: create github release
