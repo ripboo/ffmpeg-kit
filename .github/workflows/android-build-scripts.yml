@@ -42,7 +42,7 @@ jobs:
       - name: prerequisites
         run: |
           sudo apt-get update
-          sudo apt-get install -y nasm yasm build-essential ninja-build cmake pkg-config autoconf automake libtool
+          sudo apt-get install -y nasm yasm build-essential ninja-build cmake pkg-config autoconf automake libtool doxygen swig
           ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --uninstall "cmake;3.10.2.4988404" "cmake;3.18.1"
       
       - name: set up android ndk r25b
