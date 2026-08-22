@@ -45,24 +45,22 @@ jobs:
           sudo apt-get install -y nasm yasm build-essential ninja-build cmake pkg-config autoconf automake libtool doxygen swig groovy
           ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --uninstall "cmake;3.10.2.4988404" "cmake;3.18.1"
       
+      - name: remove pre-installed ndk
+        run: rm -rf /usr/local/lib/android/sdk/ndk/27*
+
       - name: set up android ndk r25b
         uses: nttld/setup-ndk@v1
+        id: setup-ndk
         with:
           ndk-version: r25b
           link-to-sdk: true
 
-      - name: set env variables
-        run: |
-          echo "ANDROID_NDK_ROOT=$ANDROID_NDK_HOME" >> $GITHUB_ENV
-          echo "NDK_PROJECT_PATH=$PWD" >> $GITHUB_ENV
-          echo "APP_ALLOW_MISSING_DEPS=true" >> $GITHUB_ENV
-
       - name: run the build script (arm64-v8a + x264 + x265)
-        env:
-          ANDROID_NDK_ROOT: ${{ env.ANDROID_NDK_HOME }}
-          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
-          APP_ALLOW_MISSING_DEPS: "true"
-        run: ./android.sh -d --enable-gpl --enable-x264 --enable-x265 --disable-arm-v7a --disable-arm-v7a-neon --disable-x86 --disable-x86-64
+        run: |
+          export ANDROID_NDK_ROOT="${{ steps.setup-ndk.outputs.ndk-path }}"
+          export ANDROID_NDK_HOME="${{ steps.setup-ndk.outputs.ndk-path }}"
+          export APP_ALLOW_MISSING_DEPS=true
+          ./android.sh -d --enable-gpl --enable-x264 --enable-x265 --disable-arm-v7a --disable-arm-v7a-neon --disable-x86 --disable-x86-64
 
       - name: prepare and upload main aar
         run: |
